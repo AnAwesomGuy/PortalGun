@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${display_name}",
+  "description": "${description}",
+  "authors": [
+    "AnAwesomGuy"
+  ],
+  "contact": {
+    "homepage": "http://modrinth.com/mod/${modrinth_id}",
+    "sources": "${github_repo}",
+    "issues": "${github_repo}/issues"
+  },
+  "entrypoints": {
+    "main": [
+      "net.anawesomguy.portalgun.fabric.PortalGunImpl"
+    ]
+  },
+  "license": "Apache-2.0",
+  "icon": "assets/${mod_id}/icon.png",
+  "environment": "*",
+  "mixins": [
+    "${mod_id}.mixins.json"
+  ],
+  "depends": {
+    "minecraft": ">=1.21",
+    "fabric-api": "*"
+  }
+}

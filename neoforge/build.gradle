@@ -1,0 +1,89 @@
+plugins {
+    id "com.github.johnrengelman.shadow"
+}
+
+architectury {
+    platformSetupLoomIde()
+    neoForge {
+        platformPackage = 'neo'
+    }
+}
+
+loom {
+    runs {
+        clientDebug {
+            client()
+            ideConfigGenerated true
+            name = "Minecraft Client Debug"
+            source sourceSets.main
+            property 'mixin.debug', 'true'
+            property "fabric.log.level", "debug"
+        }
+
+        serverDebug {
+            server()
+            ideConfigGenerated true
+            name = "Minecraft Server Debug"
+            source sourceSets.main
+            property 'mixin.debug', 'true'
+            property "fabric.log.level", "debug"
+        }
+    }
+}
+
+configurations {
+    common {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    shadowCommon {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentNeoForge.extendsFrom common
+}
+
+repositories {
+    maven { url 'https://maven.neoforged.net/releases/' }
+}
+
+dependencies {
+    neoForge "net.neoforged:neoforge:$neoforge_version"
+
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionNeoForge"))
+
+    modLocalRuntime "maven.modrinth:modernfix:18tAoFs1"
+    modLocalRuntime "maven.modrinth:ferrite-core:BkJB5PPB"
+//    modLocalRuntime "maven.modrinth:sodium:$sodium_version-neoforge" // crashes
+}
+
+tasks.withType(Jar).configureEach {
+    manifest.attributes.put 'MixinConfigs', mod_id + '.mixins.json'
+}
+
+shadowJar {
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = "dev-shadow"
+    destinationDirectory.set destinationDirectory.dir('../devlibs').get()
+    exclude "architectury_inject*/**"
+}
+
+remapJar {
+    inputFile.set shadowJar.archiveFile
+    dependsOn shadowJar
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
+}
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}

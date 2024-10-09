@@ -1,0 +1,102 @@
+plugins {
+    id "com.github.johnrengelman.shadow"
+}
+
+architectury {
+    platformSetupLoomIde()
+    fabric()
+}
+
+loom {
+    runs {
+        clientDebug {
+            client()
+            ideConfigGenerated true
+            name = "Minecraft Client Debug"
+            source sourceSets.main
+            property 'mixin.debug', 'true'
+            property "fabric.log.level", "debug"
+        }
+
+        serverDebug {
+            server()
+            ideConfigGenerated true
+            name = "Minecraft Server Debug"
+            source sourceSets.main
+            property 'mixin.debug', 'true'
+            property "fabric.log.level", "debug"
+        }
+    }
+}
+
+configurations {
+    common {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    shadowCommon { // don't use shadow from the shadow plugin since it *excludes* files.
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentFabric.extendsFrom common
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:$fabric_loader_version"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_api_version"
+
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionFabric"))
+
+    modLocalRuntime "maven.modrinth:modernfix:$modernfix_version"
+    modLocalRuntime "maven.modrinth:ferrite-core:$ferrite_core_version"
+    modLocalRuntime "maven.modrinth:sodium:$sodium_version-fabric"
+}
+
+//fabricApi.configureDataGeneration()
+//sourceSets.main.resources.exclude 'src/main/generated/.cache/*'
+//
+//import groovy.json.JsonOutput
+//import groovy.json.JsonSlurper
+//import net.fabricmc.loom.task.RemapJarTask
+//
+//tasks.withType(RemapJarTask).configureEach {
+//    exclude "net/anawesomguy/portalgun/fabric/data/**"
+//
+//    filesMatching("fabric.mod.json") {
+//        def file = it.file
+//        def parsed = new JsonSlurper().parse file
+//        def entrypoints = parsed.entrypoints
+//        if (entrypoints)
+//            entrypoints.remove("fabric-datagen")
+//        if (entrypoints.empty)
+//            parsed.remove entrypoints
+//        file.text = JsonOutput.toJson parsed
+//    }
+//}
+
+shadowJar {
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = "dev-shadow"
+    destinationDirectory.set destinationDirectory.dir('../devlibs').get()
+    exclude "architectury_inject*/**"
+}
+
+remapJar {
+    inputFile.set shadowJar.archiveFile
+    dependsOn shadowJar
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
+}
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}
